@@ -130,11 +130,11 @@ figure;
 hold on;
 title('ROSC sets $\mathcal{T}_i, i=1,\dots,N$', 'Interpreter','latex')
 grid on;
-theta_k = linspace(0,2*pi,360);
+theta = linspace(0,2*pi,360);
 for i = 1:Nradii
     r = radii.T(i);
-    x = r*cos(theta_k);
-    y = r*sin(theta_k);
+    x = r*cos(theta);
+    y = r*sin(theta);
     if i == 1
         hRed = plot(x,y,'-','Color','r');
     else
@@ -154,9 +154,15 @@ Z = zeros(2,N);
 Zr = zeros(2,N);
 ZTilde = zeros(2,N);
 
+U_opt = zeros(2,N);
+
 Hd = [-1/omegaBar   0        1/omegaBar      0;
       0         -1/omegaBar      0         1/omegaBar]';
 T = [R/2 R/2; R/D -R/D];
+A = eye(2);
+
+WR = zeros(1,N);
+WL = zeros(1,N);
 
 for k = 1:N
     % Compute zTilde, store
@@ -184,11 +190,33 @@ for k = 1:N
     end
 
     % Solve optimization
-    if i == 1
-        
+    if i_min > 1
+        objFun = @(u) objective(u, A, B, zTilde_k, ur(:,k));
+        conFun = @(u) constr(u, A, B, zTilde_k, ur(:,k), radii.T(i_min-1));
+        options = optimoptions('fmincon', 'Display', 'none');
+        [u_opt, ~] = fmincon(objFun, [0; 0], ...
+                          H_theta_k, ones(4,1), ... 
+                          [], [], ... 
+                          [], [], ... 
+                          conFun, ...  
+                          options);  
     else
-
+        leftPart = ones(4,1) + H_theta_k * inv(B) * zTilde_k;
+        [ur_k_hat, ~] = quadprog(2 * eye(2), -2 * ur(:,k), H_theta_k, leftPart);
+        u_opt = -inv(B) * zTilde_k + ur_k_hat;
     end
 
+    % Compute wR,wL
+    command = inv(T) * T_FL_theta_k * u_opt;
+    WR(k) = command(1);
+    WL(k) = command(2);
 
+    % Apply to robot
+    velocities = T * command;
+    vk = velocities(1);
+    wk = velocities(2);
+
+    X(:,k+1) = X(:,k) + [Ts * vk * cos(theta_k); Ts * vk * sin(theta_k); Ts * wk];
 end
+
+plot(X(1,:),X(2,:))
