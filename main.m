@@ -72,18 +72,6 @@ end
 radii.rD = max(d_norms);
 fprintf('radius of the disturbance set D (rd): %.4f\n', radii.rD);
 
-% Plots
-figure;
-hold on;
-title('Reference Trajectory')
-plot(xr, yr, 'b-.', 'LineWidth', 1.5); 
-xlabel('X Position (m)');
-ylabel('Y Position (m)');
-grid on;
-xlim([-1 1]);
-ylim([-1 1]);
-axis square
-hold off;
 
 %% Offline Phase
 
@@ -125,26 +113,6 @@ end
 radii.T = radii.T(1:i-1);
 Nradii = length(radii.T);
 
-% Plots
-figure;
-hold on;
-title('ROSC sets $\mathcal{T}_i, i=1,\dots,N$', 'Interpreter','latex')
-grid on;
-theta = linspace(0,2*pi,360);
-for i = 1:Nradii
-    r = radii.T(i);
-    x = r*cos(theta);
-    y = r*sin(theta);
-    if i == 1
-        hRed = plot(x,y,'-','Color','r');
-    else
-        plot(x,y,'-','Color','b');
-    end
-    axis equal;
-end
-hDot = plot(zTilde0(1),zTilde0(2),'LineStyle','none','Marker','hexagram','MarkerSize',8,'Color','black','MarkerFaceColor','black');
-legend( [hRed,hDot],{'Set $\mathcal{D}$','$\tilde{z}(0)$'},'Interpreter','latex');
-hold off
 
 %% Online
 X = zeros(3,N);
@@ -163,6 +131,8 @@ A = eye(2);
 
 WR = zeros(1,N);
 WL = zeros(1,N);
+
+Imin = zeros(1,N);
 
 for k = 1:N
     % Compute zTilde, store
@@ -185,7 +155,7 @@ for k = 1:N
     i_min = 0;
     for i = 1:Nradii
         if isCovered(zTilde_k, radii.T(i))
-            i_min = i;
+            i_min = i; Imin(k) = i_min; break;
         end
     end
 
@@ -201,10 +171,14 @@ for k = 1:N
                           conFun, ...  
                           options);  
     else
+        Imin(k) = i_min;
         leftPart = ones(4,1) + H_theta_k * inv(B) * zTilde_k;
         [ur_k_hat, ~] = quadprog(2 * eye(2), -2 * ur(:,k), H_theta_k, leftPart);
         u_opt = -inv(B) * zTilde_k + ur_k_hat;
     end
+
+    % Store u_opt
+    U_opt(:,k) = u_opt;
 
     % Compute wR,wL
     command = inv(T) * T_FL_theta_k * u_opt;
@@ -219,4 +193,78 @@ for k = 1:N
     X(:,k+1) = X(:,k) + [Ts * vk * cos(theta_k); Ts * vk * sin(theta_k); Ts * wk];
 end
 
-plot(X(1,:),X(2,:))
+%% Plots
+figure;
+hold on;
+title('Reference Trajectory vs Actual Trajectory')
+referenceTraj = plot(xr, yr, 'b-.', 'LineWidth', 1.5);
+actualTraj = plot(X(1,:),X(2,:), 'LineWidth', 1.5, 'Color', 'r');
+xlabel('X Position (m)');
+ylabel('Y Position (m)');
+grid on;
+xlim([-1 1]);
+ylim([-1 1]);
+axis square
+legend([referenceTraj, actualTraj], {'Reference','Actual'});
+hold off;
+
+figure;
+hold on;
+title('ROSC sets $\mathcal{T}_i, i=1,\dots,N$', 'Interpreter','latex')
+grid on;
+theta = linspace(0,2*pi,360);
+for i = 1:Nradii
+    r = radii.T(i);
+    x = r*cos(theta);
+    y = r*sin(theta);
+    if i == 1
+        hRed = plot(x,y,'-','Color','r');
+    else
+        plot(x,y,'-','Color','b');
+    end
+    axis square;
+end
+hDot = plot(zTilde0(1),zTilde0(2),'LineStyle','none','Marker','hexagram','MarkerSize',8,'Color','black','MarkerFaceColor','black');
+points = plot(ZTilde(1,:), ZTilde(2,:), 'Color','m','Marker','o');
+legend( [hRed,hDot,points],{'Set $\mathcal{D}$','$\tilde{z}(0)$','$\tilde{z}(k)$'},'Interpreter','latex');
+hold off
+
+figure;
+hold on;
+title('$i(k)$ value over time', 'Interpreter','latex');
+plot(1:N,Imin, 'LineWidth',1.5);
+grid on;
+axis tight
+hold off
+
+figure;
+hold on;
+subplot(3,3,[1 2 3])
+hold on
+title('Angular Velocities')
+maxLine = yline(omegaBar, 'LineStyle','--','Color','r');
+plotWR = plot(1:N,WR,'LineWidth',1.5);
+plotWL = plot(1:N,WL,'LineWidth',1.5);
+legend([plotWL,plotWR,maxLine],{'$\omega_L$','$\omega_R$','$\bar{\omega}$'},'Interpreter','latex');
+grid on;
+hold off
+subplot(3,3,[4 5 6])
+hold on
+title('Actual vs Reference Angle')
+unwrapped_theta_r = unwrap(theta_r);
+plotThetaRef = plot(1:N,unwrapped_theta_r,'LineStyle','--','Color','black','LineWidth',1.5);
+plotThetaActual = plot(1:N, X(3,1:N), 'LineWidth', 1.5);
+legend([plotThetaRef, plotThetaActual], {'$\theta_r$', '$\theta$'}, 'Interpreter', 'latex');
+grid on;
+hold off
+subplot(3,3,[7 8 9])
+hold on
+title('Control Input')
+u1r_plot = plot(1:N, ur(1,:), 'LineWidth', 1.5, 'LineStyle','--','Color','b');
+u1_plot = plot(1:N, U_opt(1,:),'LineWidth', 1.5, 'Color','b');
+u2r_plot = plot(1:N, ur(2,:), 'LineWidth', 1.5, 'LineStyle','--','Color','g');
+u2_plot = plot(1:N, U_opt(2,:),'LineWidth', 1.5, 'Color','g');
+legend([u1r_plot,u1_plot,u2r_plot,u2_plot],{'$u(1)_r$','$u(1)_{opt}$','$u(2)_r$','$u(2)_{opt}$'},'Interpreter','latex');
+grid on;
+hold off;
+hold off;
