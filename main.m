@@ -155,7 +155,9 @@ for k = 1:N
     i_min = 0;
     for i = 1:Nradii
         if isCovered(zTilde_k, radii.T(i))
-            i_min = i; Imin(k) = i_min; break;
+            i_min = i; 
+            Imin(k) = i_min; 
+            break;
         end
     end
 
@@ -171,9 +173,9 @@ for k = 1:N
                           conFun, ...  
                           options);  
     else
-        Imin(k) = i_min;
         leftPart = ones(4,1) + H_theta_k * inv(B) * zTilde_k;
-        [ur_k_hat, ~] = quadprog(2 * eye(2), -2 * ur(:,k), H_theta_k, leftPart);
+        options = optimoptions("quadprog","Display","off");
+        [ur_k_hat, ~] = quadprog(2 * eye(2), -2 * ur(:,k), H_theta_k, leftPart, [], [],[],[],[],options);
         u_opt = -inv(B) * zTilde_k + ur_k_hat;
     end
 
