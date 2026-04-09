@@ -105,11 +105,6 @@ while ~isCovered(zTilde0, radii.T(i-1))
     i = i + 1;
 end
 
-function boolean = isCovered(zTilde0, r)
-    dist = norm(zTilde0,2);
-    boolean = dist <= r;
-end
-
 radii.T = radii.T(1:i-1);
 Nradii = length(radii.T);
 
@@ -133,6 +128,10 @@ WR = zeros(1,N);
 WL = zeros(1,N);
 
 Imin = zeros(1,N);
+
+% --- Add these before the loop ---
+u_pre = [0; 0];          % Track the previous control action
+R_weight = 0.5 * eye(2); % Weight for the control rate penalty
 
 for k = 1:N
     % Compute zTilde, store
@@ -163,7 +162,7 @@ for k = 1:N
 
     % Solve optimization
     if i_min > 1
-        objFun = @(u) objective(u, A, B, zTilde_k, ur(:,k));
+        objFun = @(u) objective(u, A, B, zTilde_k, ur(:,k),u_pre,R_weight);
         conFun = @(u) constr(u, A, B, zTilde_k, ur(:,k), radii.T(i_min-1));
         options = optimoptions('fmincon', 'Display', 'none');
         [u_opt, ~] = fmincon(objFun, [0; 0], ...
@@ -193,6 +192,8 @@ for k = 1:N
     wk = velocities(2);
 
     X(:,k+1) = X(:,k) + [Ts * vk * cos(theta_k); Ts * vk * sin(theta_k); Ts * wk];
+    
+    u_pre = u_opt;
 end
 
 %% Plots
@@ -270,3 +271,10 @@ legend([u1r_plot,u1_plot,u2r_plot,u2_plot],{'$u(1)_r$','$u(1)_{opt}$','$u(2)_r$'
 grid on;
 hold off;
 hold off;
+
+%% Functions
+function boolean = isCovered(zTilde0, r)
+    dist = norm(zTilde0,2);
+    boolean = dist <= r;
+end
+
