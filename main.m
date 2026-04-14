@@ -26,7 +26,7 @@ wr = zeros(1,N);
 ur = zeros(2,N);
 
 %% Compute reference trajectory
-
+dv = zeros(2,N);
 for k = 1:N
     tk = t(k);
     
@@ -63,7 +63,7 @@ for k = 1:N
     % Disturbance d(k) (Eq 16) 
     B = eye(2) * Ts;
     d = -B * ur(:,k);
-    
+    dv(:,k) = d;
     % Euclidean norm (length) of the disturbance vector
     d_norms(k) = norm(d);
 end
@@ -71,6 +71,14 @@ end
 % maximum disturbance radius for Set D
 radii.rD = max(d_norms);
 fprintf('radius of the disturbance set D (rd): %.4f\n', radii.rD);
+
+figure;
+hold on;
+disturbances = plot(dv(1,:),dv(2,:));
+Dset = ellipsoid(radii.rD * eye(2));
+plot(Dset);
+grid on;
+hold off
 
 
 %% Offline Phase
