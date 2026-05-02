@@ -75,7 +75,7 @@ fprintf('radius of the disturbance set D (rd): %.4f\n', radii.rD);
 figure;
 hold on;
 disturbances = plot(dv(1,:),dv(2,:));
-Dset = ellipsoid(radii.rD * eye(2));
+Dset = ellipsoid(radii.rD^2 * eye(2));
 plot(Dset);
 grid on;
 hold off
