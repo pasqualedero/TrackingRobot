@@ -28,21 +28,23 @@ wr = zeros(1,N);
 ur = zeros(2,N);
 
 %% Compute reference trajectory
+alpha = 0.06;
+beta = 9;
 dv = zeros(2,N);
 for k = 1:N
     tk = t(k);
     
     % Reference Trajectory 
-    xr(k) = 0.6*sin(tk/3.5); 
-    yr(k) = 0.6*sin(tk/7);
+    xr(k) = alpha*sin(tk/(beta/2)); 
+    yr(k) = alpha*sin(tk/beta);
     
     % 1st derivatives 
-    x_dot = (0.6 / 3.5) * cos(tk / 3.5);
-    y_dot = (0.6 / 7.0) * cos(tk / 7.0);
+    x_dot = (alpha / (beta/2)) * cos(tk / (beta/2));
+    y_dot = (alpha / beta) * cos(tk / beta);
     
     % 2nd derivatives 
-    x_ddot = -(0.6 / 3.5^2) * sin(tk / 3.5);
-    y_ddot = -(0.6 / 7.0^2) * sin(tk / 7.0);
+    x_ddot = -(alpha / (beta/2)^2) * sin(tk / (beta/2));
+    y_ddot = -(alpha / beta^2) * sin(tk / beta);
     
     % Unicycle Reference Velocities (Eq 11) 
     vr(k) = sqrt(x_dot^2 + y_dot^2);
@@ -99,7 +101,7 @@ else
         'authority to overcome disturbance'])
 end
 
-radii.rD2 = radii.rD - 0.087;
+radii.rD2 = radii.rD;
 % Calculate radii u2
 radii.rU2 = (2 * u2 * R * b) / (sqrt(4 * b^2 + D^2));
 fprintf('radius of set circ. approx. U [see (20)]: %.4f\n', radii.rU2);
@@ -114,7 +116,7 @@ else
         'authority to overcome disturbance'])
 end
 
-radii.rD3 = radii.rD2 - 0.087;
+radii.rD3 = radii.rD2;
 % Calculate radii u3
 radii.rU3 = (2 * u3 * R * b) / (sqrt(4 * b^2 + D^2));
 fprintf('radius of set circ. approx. U [see (20)]: %.4f\n', radii.rU3);
