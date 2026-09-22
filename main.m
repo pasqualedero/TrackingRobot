@@ -28,8 +28,8 @@ wr = zeros(1,N);
 ur = zeros(2,N);
 
 %% Compute reference trajectory
-alpha = 0.06;
-beta = 9;
+alpha = 0.8;
+beta = 19;
 dv = zeros(2,N);
 for k = 1:N
     tk = t(k);
